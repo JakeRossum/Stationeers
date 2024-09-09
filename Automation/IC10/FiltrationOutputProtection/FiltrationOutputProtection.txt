@@ -1,0 +1,37 @@
+# FiltrationOutputProtection
+#   - Monitors output pipes to avoid exceeding specified maximum pressure(s).
+
+# User configuration.
+define MaxOutputPressure  30000  # 30MPa
+define MaxOutput2Pressure 30000  # 30MPa
+
+# State registers (used to simplify coding).
+alias rIsOutputPressureOkay  r8
+alias rIsOutput2PressureOkay r9
+alias rEnableFiltration r10
+
+# Called once; disables filtration (mode == 0) until logic checks run.
+initialize:
+  move rEnableFiltration 0
+  s db Mode rEnableFiltration
+
+# Main execution loop with yield.
+mainLoop:
+  yield
+
+# Compute state registers.
+computeStates:
+  l r0 db OutputPressure
+  sle rIsOutputPressureOkay r0 MaxOutputPressure
+
+  l r0 db Output2Pressure
+  sle rIsOutpu2tPressureOkay r0 MaxOutput2Pressure
+
+  and rEnableFiltration rIsOutputPressureOkay rIsOutput2PressureOkay
+
+# Set filtration mode (turns filtering on or off).
+setFiltrationMode:
+  s db Mode rEnableFiltration
+
+endLoop:
+  j mainLoop
