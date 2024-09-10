@@ -1,0 +1,67 @@
+# MoonCooling
+#   - Cools internal base gas or storage tank gas using the Moon's vacuum world environment
+
+# User configuration of max/min temperature to maintain.
+#   - Wider the range, the less the pump will be used, thus less power required.
+define MaxInternalTemperature 299.15  # 26C
+define MinInternalTemperature 297.15  # 24C
+
+alias dExternalAnalyzer d0
+alias dInternalAnalyzer d1
+alias dInOutValve d2
+alias dInPump d3
+
+initialize:
+  s dExternalAnalyzer On 1
+  s dInternalAnalyzer On 1
+  s dInOutValve On 0
+  s dInPump On 0
+  l r0 dInPump Maximum
+  s dInPump Setting r0
+
+mainLoop:
+  yield
+
+  # If internal temperature is too hot, open the valve.
+  l r0 dInternalAnalyzer Temperature
+  brle r0 MaxInternalTemperature 2
+  s dInOutValve On 1
+
+  # If internal temperature is too cold, close the valve.
+  l r0 dInternalAnalyzer Temperature
+  brge r0 MinInternalTemperature 2
+  s dInOutValve On 0
+
+  # If the valve is closed, then make sure the external pipes are empty.
+  l r0 dInOutValve On
+  beqzal r0 fnEmptyExternalPipes
+
+endLoop:
+  j mainLoop
+
+# Empty the external pipes of gas to prevent freezing.
+#  - Will auto fix the pump mode if wrong direction.
+fnEmptyExternalPipes:
+
+fnEmptyExternalPipesLoop:
+  # If external pressure is 0 then done.
+  l r0 dExternalAnalyzer Pressure
+  beqz r0 fnEmptyExternalPipesEnd
+
+  # Run the pump for a second.
+  s dInPump On 1
+  sleep 1
+
+  # If the external pressure is actually going up, then invert the mode <g>.
+  l r1 dExternalAnalyzer Pressure
+  ble r1 r0 fnEmptyExternalPipesLoop
+  l r0 dInPump Mode
+  seqz r0 r0
+  s dInPump Mode r0
+  sleep 1
+  j fnEmptyExternalPipesLoop
+
+fnEmptyExternalPipesEnd:
+  s dInPump On 0
+  j ra
+
