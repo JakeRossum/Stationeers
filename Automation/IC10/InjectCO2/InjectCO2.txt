@@ -1,0 +1,82 @@
+# InjectCO2
+#   - Injects CO2 gas into a room based on user configuration.
+
+# User configuration, CO2 between percentages (4% to 6%).
+define MinRatioCarbonDioxide 0.04
+define MaxRatioCarbonDioxide 0.06
+
+# User configuration, max/min room pressure (overrides carbon dioxide percentage).
+define MaxRoomPressure 100 # 100kPa
+define MinRoomPressure 50  # 50kPa
+
+# User configuration, maximum room temperature (don't inject if room is too hot).
+#   - Useful when input CO2 gas is too hot and should be injected slowly.
+define MaxRoomTemperature 313.15  # 40C
+
+# Device Ports
+alias dGasSensor d0
+alias dInjectionPump d1
+
+# State registers (used to simplify coding).
+alias rRoomTemperatureTooHot r8
+alias rRoomPressureTooHigh r9
+alias rRoomPressureTooLow r10
+alias rCarbonDioxideTooHigh r11
+alias rCarbonDioxideTooLow r12
+
+# Called once.
+initialize:
+  s dInjectionPump On 0
+  l r0 dInjectionPump Maximum
+  s dInjectionPump Setting r0
+
+# Main execution loop with yield.
+mainLoop:
+  yield
+
+# Compute state registers.
+computeStates:
+  l r0 dGasSensor Temperature
+  sgt rRoomTemperatureTooHot r0 MaxRoomTemperature
+
+  l r0 dGasSensor Pressure
+  sgt rRoomPressureTooHigh r0 MaxRoomPressure
+  slt rRoomPressureTooLow r0 MinRoomPressure
+
+  l r0 dGasSensor RatioCarbonDioxide
+  sgt rCarbonDioxideTooHigh r0 MaxRatioCarbonDioxide
+  slt rCarbonDioxideTooLow r0 MinRatioCarbonDioxide
+
+# Apply rules in priority order.
+applyRules:
+  # If room temperature is too high, turn off injection.
+  bnez rRoomTemperatureTooHot turnInjectionOff
+
+  # If room pressure is too high, turn off injection.
+  bnez rRoomPressureTooHigh turnInjectionOff
+
+  # If room pressure is too low, turn on injection to get pressure higher.
+  bnez rRoomPressureTooLow turnInjectionOn
+
+  # If carbon dioxide is too high, turn off injection.
+  bnez rCarbonDioxideTooHigh turnInjectionOff
+
+  # If carbon dioxide is too low, turn on injection.
+  bnez rCarbonDioxideTooLow turnInjectionOn
+
+  # Default, leave injection setting as is.
+  
+# Repeat the main loop.
+endLoop:
+  j mainLoop
+
+# Turn off injection.
+turnInjectionOff:
+  s dInjectionPump On 0
+  j endLoop
+  
+# Turn on injection.
+turnInjectionOn:
+  s dInjectionPump On 1
+  j endLoop
+  
