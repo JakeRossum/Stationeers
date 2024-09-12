@@ -1,0 +1,78 @@
+# ExtractO2
+#   - Extracts O2 from a room using a Filtration device.
+#   - State of O2 filters not checked.
+
+# User configuration, minimum O2 to remain in the room (to permit helmet off access).
+define MinRatioOxygen 0.50  # 50%
+
+# User configuration, minimum room pressure (generally a value to keep plants happy).
+define MinRoomPressure 70  # 70kPa
+
+# User configuration, maximum room temperature (don't extract if O2 is too hot).
+define MaxRoomTemperature 313.15  # 40C
+
+# User configuration, maximum output (typically storage tank) pressure.
+define MaxOutputPressure 10000  # 10MPa
+
+# Device Ports (Only using the Filtration unit itself).
+alias dSelf db
+
+# State registers (used to simplify coding).
+alias rRoomOxygenTooLow r8
+alias rRoomTemperatureTooHot r9
+alias rRoomPressureTooLow r10
+alias rOutputPressureTooHigh r11
+
+# Called once to put filtration unit into known state.
+initialize:
+  s db Mode 0
+
+# Main execution loop with yield.
+mainLoop:
+  yield
+
+# Compute state registers.
+computeStates:
+  l r0 dSelf RatioOxygenInput
+  slt rRoomOxygenTooLow r0 MinRatioOxygen
+
+  l r0 dSelf TemperatureInput
+  sgt rRoomTemperatureTooHot r0 MaxRoomTemperature
+
+  l r0 dSelf PressureInput
+  slt rRoomPressureTooLow r0 MinRoomPressure
+
+  l r0 dSelf PressureOutput
+  sgt rOutputPressureTooHigh r0 MaxOutputPressure
+
+# Apply rules in priority order.
+applyRules:
+  # If oxygen level is too low, turn off Extraction.
+  bnez rRoomOxygenTooLow turnExtractionOff
+
+  # If room temperature is too high, turn off Extraction.
+  bnez rRoomTemperatureTooHot turnExtractionOff
+
+  # If room pressure is too low, turn off Extraction.
+  bnez rRoomPressureTooLow turnExtractionOff
+
+  # If output pressure is too high, turn off Extraction.
+  bnez rOutputPressureTooHigh turnExtractionOff
+
+  # Default, turn on Extraction.
+  j turnExtractionOn
+  
+# Repeat the main loop.
+endLoop:
+  j mainLoop
+
+# Turn off Extraction.
+turnExtractionOff:
+  s dSelf Mode 0
+  j endLoop
+  
+# Turn on Extraction.
+turnExtractionOn:
+  s dSelf Mode 1
+  j endLoop
+  
