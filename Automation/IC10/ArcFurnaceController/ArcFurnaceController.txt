@@ -1,0 +1,43 @@
+# ArcFurnaceController
+#   - Automates feeding input into an idle furnace.
+#   - Supports up to 6 Arc Furnaces (D0..D5) on an IC Housing.
+
+# Register that defines the current device index (0..5), but forced to hardcode with dr8 as it ("dr8") can't be an alias.
+alias rDeviceIndex r8
+
+# Count of device indexes, uses all D0..D5 ports
+define DeviceIndexCount 6
+
+# Called once, resets the device index to 0.
+initialize:
+  move rDeviceIndex 0
+
+# Main execution loop with yield.
+mainLoop:
+  yield
+
+  # If an actual device is connected, then assume an Arc Furnace and handle it.
+  bdseal dr8 processArcFurnace
+
+  # Increment to the next device and auto wrap back to 0.
+  add rDeviceIndex rDeviceIndex 1
+  mod rDeviceIndex rDeviceIndex 6
+
+# Repeat the main loop.
+endLoop:
+  j mainLoop
+
+# Handle an Arc Furnace as defined by rDeviceIndex (r8), but "dr8" is used in the actual code for indirection.
+processArcFurnace:
+
+  # If busy (Idle == 0), then just return to the caller.  
+  l r0 dr8 Idle
+  beqz r0 ra
+
+  # If input to the furnace is available, then power it up and activate; otherwise power it down.
+  ls r0 dr8 0 Occupied
+  s dr8 On r0
+  s dr8 Activate r0
+
+  # Return to the caller.
+  j ra
