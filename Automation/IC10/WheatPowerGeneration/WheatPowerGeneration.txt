@@ -1,0 +1,72 @@
+# WheatPowerGeneration
+#   - Charges station battery from wheat (or any plant).
+
+# User configuration, max/min battery charge on ratio (percentage).
+define MaxBatteryCharge 0.90  # 90% Level to stop charging.
+define MinBatteryCharge 0.50  # 50% Level to start charging.
+
+# Device Ports
+alias dArcFurnace d0
+alias dGenerator d1
+alias dBattery d2
+
+# State registers (used to simplify coding).
+alias rFurnaceRunning r8
+alias rGeneratorRunning r9
+alias rBatteryTooHigh r10
+alias rBatteryTooLow r11
+
+# Flag to indicate whether charging or not.
+alias rChargingBattery r12
+
+# Called once.
+initialize:
+  s dArcFurnace On 0
+  s dGenerator On 1
+  s dBattery On 1
+  move rChargingBattery 0
+
+# Main execution loop with yield.
+mainLoop:
+  yield
+
+# Compute state registers.
+computeStates:
+  l r0 dArcFurnace Idle
+  seqz rFurnaceRunning r0
+
+  l r0 dGenerator PowerGeneration
+  snez rGeneratorRunning r0
+
+  l r0 dBattery Ratio
+  sgt rBatteryTooHigh r0 MaxBatteryCharge
+  slt rBatteryTooLow r0 MinBatteryCharge
+
+# Apply rules in priority order.
+applyRules:
+  # If furnace is running then wait.
+  bnez rFurnaceRunning endLoop
+
+  # If generator is running then wait.
+  bnez rGeneratorRunning endLoop
+
+  # If battery charge is too high then turn off charging.
+  breqz rBatteryTooHigh 2
+  move rChargingBattery 0
+
+  # If battery charge is too low then turn on charging.
+  breqz rBatteryTooLow 2
+  move rChargingBattery 1
+
+  # If not charging then wait.
+  beqz rChargingBattery endLoop
+
+  # Feed the arc furnace which will feed the solid generator.
+  ls r0 dArcFurnace 0 Occupied
+  s dArcFurnace On r0
+  s dArcFurnace Activate r0
+
+# Repeat the main loop.
+endLoop:
+  j mainLoop
+
