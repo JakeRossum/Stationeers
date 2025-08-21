@@ -1,0 +1,14 @@
+# SimpleGrowLightOnOff
+#   - Very simple script to turn all grow lights on the network on for 15 minutes and off for 5 minutes.
+
+define hashGrowLight HASH("StructureGrowLight")
+
+initialize:
+  sb hashGrowLight On 0
+
+main:
+  sb hashGrowLight On 1
+  sleep 900
+  sb hashGrowLight On 0
+  sleep 300
+  j main
