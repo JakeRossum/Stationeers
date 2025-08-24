@@ -1,0 +1,16 @@
+# SimpleO2Filter.txt
+#   - Simple script to fill an O2 tank without overfilling.
+
+define MaxOutputPressure 9000  # 9MPa
+alias rEnableFiltration r10
+
+initialize:
+  move rEnableFiltration 0
+
+main:
+  s db Mode rEnableFiltration
+
+  l r0 db PressureOutput
+  sle rEnableFiltration r0 MaxOutputPressure
+
+  j main
