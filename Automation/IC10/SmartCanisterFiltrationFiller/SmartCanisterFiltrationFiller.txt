@@ -1,0 +1,54 @@
+# User Configuration.
+define MinInputTemperature 283.15  # 10C
+define MaxInputTemperature 303.15  # 30C
+define MaxCanisterPressure 9000  # 9 MPa
+define MaxSmartCanisterPressure 19000  # 19 MPa
+
+# Defines and aliases.
+define hashGasTankStorage HASH("StructureGasTankStorage")
+define hashSmartCanister HASH("ItemGasCanisterSmart")
+alias rMaxPressure r10
+
+# Disable filtering.
+filterationOff:
+  s db Mode 0
+  sleep 1
+
+# Main loop
+mainLoop:
+  yield
+
+# If input gas is too cold, then wait.
+minTemperatureCheck:
+  l r0 db TemperatureInput
+  blt r0 MinInputTemperature filterationOff
+
+# If input gas is too hot, then wait.
+maxTemperatureCheck:
+  l r0 db TemperatureInput
+  bgt r0 MaxInputTemperature filterationOff
+
+# Default to a safe max pressure.
+defaultMaxPressure:
+  move rMaxPressure MaxCanisterPressure
+
+# If D0 is connected, then obtain the canister type.
+canisterType:
+  bdns d0 canisterTypeEnd
+  ls r0 d0 0 PrefabHash
+  bne r0 hashSmartCanister canisterTypeEnd
+  move rMaxPressure MaxSmartCanisterPressure
+canisterTypeEnd:
+
+# Verify not exceeding the output pressure.
+pressureCheck:
+  l r0 db PressureOutput
+  bgt r0 rMaxPressure filterationOff
+
+# Turn on filteration.
+filterationOn:
+  s db Mode 1
+
+# Perform the checks again.
+endLoop:
+  j mainLoop
