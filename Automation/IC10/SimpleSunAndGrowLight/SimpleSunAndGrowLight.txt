@@ -1,0 +1,48 @@
+# SimpleSunAndGrowLight
+#   - Use the combination of the Sun and GrowLight to maximize growth and save power.
+#   - Guarantees the specific minutes of darkness.
+
+# User configuration.
+define DarkTimespanInSeconds 210  # 3:30 Minutes (Potatoes min dark is 3:20 minutes).
+
+# Device Ports
+alias dDaySensor d0
+
+# Device Hashes
+define hashGrowLight HASH("StructureGrowLight")
+
+# Wait for darkness to begin (and make sure the grow light is off).
+waitForNight:
+  sb hashGrowLight On 0
+  sleep 1
+  l r0 dDaySensor Activate
+  bnez r0 waitForNight
+
+# Night at this point and light is off, sleep for the specified duration.
+sleepInDarkness:
+  sleep DarkTimespanInSeconds
+
+# Required darkness completed, turn on the grow light(s).
+enableGrowLight:
+  sb hashGrowLight On 1
+
+# Wait for daylight to begin.
+waitForDay:
+  sleep 1
+  l r0 dDaySensor Activate
+  beqz r0 waitForDay
+
+# Turn off the grow light during the day.
+growlightOffDuringDay:
+  sb hashGrowLight On 0
+
+# Wait for the start of the next night cycle.
+  j waitForNight
+  
+
+  
+  
+
+
+  
+
