@@ -1,0 +1,78 @@
+# EuropaFuelMixer
+#   - Mixes atmospheric O2 with Volatile Ice.
+#   - Connect O2 vent to gas mixer input 1.
+#   - Connect H2 (Ice Crusher output) to gas mixed input 2.
+
+# Credits: https://stationeers-wiki.com/Temperature_independent_fuel_mixing
+
+# User configuration.
+define MaxGasTankPresure 30000  # 30 MPa
+
+# Device Ports
+alias dGasMixer d0
+alias dPipeAnalyzer1 d1
+alias dPipeAnalyzer2 d2
+alias dPipeIgniter d3
+alias dButton d4
+alias dGasTank d5
+
+# State registers.
+alias rOxygenPressure r8
+alias rOxygenTemperature r9
+alias rVolatilePressure r10
+alias rVolatileTemperature r11
+alias rGasMixerSettings r12
+alias rGasTankPressure r13
+
+# Initialization.
+initialize:
+  s dGasMixer On 0
+  s dGasMixer Setting 0
+  s dPipeAnalyzer1 On 1
+  s dPipeAnalyzer2 On 1
+
+# Main execution loop with yield.
+main:
+  yield
+
+# Optional logic to ignite the gas tank, remove if not required.
+IgniteGas:
+  l r0 dButton Setting
+  beqz r0 loadState
+  s dPipeIgniter Activate 1
+
+# Load state of attached devices.
+loadState:
+  l rOxygenPressure dPipeAnalyzer1 Pressure
+  l rOxygenTemperature dPipeAnalyzer1 Temperature
+  l rVolatilePressure dPipeAnalyzer2 Pressure
+  l rVolatileTemperature dPipeAnalyzer2 Temperature
+  l rGasTankPressure dGasTank Pressure
+
+# If the output Gas Tank is full (exceeded max pressure), shutdown mixing.
+  bgt rGasTankPressure MaxGasTankPresure mixerOff
+
+# If no input gas available, shutdown mixing.
+  beqz rOxygenPressure mixerOff
+  beqz rOxygenTemperature mixerOff
+  beqz rVolatilePressure mixerOff
+  beqz rVolatileTemperature mixerOff
+
+# Compute the O2/H2 radio, assuming Oxygen is connected to the Mixer's input 1.
+computeMixture:
+  mul r0 rVolatileTemperature 2
+  div r0 r0 rOxygenTemperature
+  add r0 1 r0
+  div rGasMixerSettings 100 r0
+
+# Set the mixer ratio and turn on.
+mixerSet:
+  s dGasMixer Setting rGasMixerSettings
+  s dGasMixer On 1
+  j main
+
+# Reset the mixer ratio and turn off.
+mixerOff:
+  s dGasMixer Setting 0
+  s dGasMixer On 0
+  j main
