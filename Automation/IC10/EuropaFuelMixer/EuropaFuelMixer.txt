@@ -2,6 +2,7 @@
 #   - Mixes atmospheric O2 with Volatile Ice.
 #   - Connect O2 vent to gas mixer input 1.
 #   - Connect H2 (Ice Crusher output) to gas mixed input 2.
+#   - Video explanation: https://youtu.be/Nqhcpk-3zro
 
 # Credits: https://stationeers-wiki.com/Temperature_independent_fuel_mixing
 
