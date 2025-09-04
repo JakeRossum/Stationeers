@@ -59,7 +59,7 @@ loadState:
   beqz rVolatilePressure mixerOff
   beqz rVolatileTemperature mixerOff
 
-# Compute the O2/H2 radio, assuming Oxygen is connected to the Mixer's input 1.
+# Compute the O2/H2 ratio (H2 = volatiles), assuming Oxygen is connected to the Mixer's input 1.
 computeMixture:
   mul r0 rVolatileTemperature 2
   div r0 r0 rOxygenTemperature
