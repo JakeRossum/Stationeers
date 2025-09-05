@@ -1,0 +1,45 @@
+# VulcanSimpleStage1Cooling
+
+# Constants.
+define MaxWorldTemperature 403.15  # 130C
+define MaxOutputGasPressure 7000  # 7MPa
+define MaxTankPressure 4000 # 4MPa
+
+# Device Ports.
+alias dGasSensor d0
+alias dActiveVent d1
+alias dGasTank d2
+
+# Initialization.
+initialize:
+  s dActiveVent On 0
+  s dActiveVent Mode 1
+
+# Main execution loop.
+main:
+  yield
+
+# Only run during night (or storms).
+checkWorldTemperature:
+  l r0 dGasSensor Temperature
+  bgt r0 MaxWorldTemperature turnVentOff
+
+# If the output gas pressure is too high, turn the vent off.
+checkHighGasPressure:
+  l r0 dActiveVent PressureOutput
+  bgt r0 MaxOutputGasPressure turnVentOff
+
+# If the tank pressure is too high, turn the vent off.
+checkHighTankPressure:
+  l r0 dGasTank PressureOutput
+  bgt r0 MaxTankPressure turnVentOff
+
+# Turn on the vent and restart the main loop.
+  s dActiveVent On 1
+  j main
+
+# Turn the vent off and restart the main loop.
+turnVentOff:
+  s dActiveVent On 0
+  j main
+
