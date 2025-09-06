@@ -1,4 +1,5 @@
 # VulcanSimpleStage1Cooling
+#   - User comment: Set the ActiveVent PressureInternal Limit to MaxOutputGasPressure (not implemented yet).
 
 # Constants.
 define MaxWorldTemperature 403.15  # 130C
