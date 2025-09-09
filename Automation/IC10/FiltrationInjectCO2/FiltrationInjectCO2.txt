@@ -1,0 +1,79 @@
+# FiltrationInjectCO2
+#   - Injects CO2 gas into a room based on user configuration using a filtration device.
+#   - Optional Flashing Light on D0 when CO2 is too low.
+#   - User configuration setup for Potatoes.
+
+# User configuration, low CO2 alarm (below 2%).
+define MinCarbonDioxideAlarm 0.02
+
+# User configuration, min/max CO2 percentages (4% to 6%).
+define MinCarbonDioxide 0.04
+define MaxCarbonDioxide 0.06
+
+# User configuration, min/max room pressure (overrides carbon dioxide percentage).
+define MinRoomPressure 50  # 50kPa
+define MaxRoomPressure 100 # 100kPa
+
+# Device Ports
+alias dAlarm d0  # Optional, typical Flashing Light device.
+
+# State registers (used to simplify coding).
+alias rCarbonDioxideAlarm r10
+alias rCarbonDioxideTooHigh r11
+alias rCarbonDioxideTooLow r12
+alias rRoomPressureTooHigh r13
+alias rRoomPressureTooLow r14
+
+# Initialization, disable injection.
+initialize:
+  s db Mode 0
+
+# Main loop
+mainLoop:
+  yield
+
+# Compute current state and store in registers.
+computeStates:
+  l r0 db PressureOutput
+  slt rRoomPressureTooLow r0 MinRoomPressure
+  sgt rRoomPressureTooHigh r0 MaxRoomPressure
+
+  l r0 db RatioCarbonDioxideOutput
+  slt rCarbonDioxideAlarm r0 MinCarbonDioxideAlarm
+  slt rCarbonDioxideTooLow r0 MinCarbonDioxide
+  sgt rCarbonDioxideTooHigh r0 MaxCarbonDioxide
+
+setAlert:
+  bdns dAlarm applyRules
+  s dAlarm On rCarbonDioxideAlarm
+
+# Apply rules in priority order.
+applyRules:
+  # If room pressure is too high, turn off injection.
+  bnez rRoomPressureTooHigh turnInjectionOff
+
+  # If room pressure is too low, turn on injection to get pressure higher.
+  bnez rRoomPressureTooLow turnInjectionOn
+
+  # If carbon dioxide is too high, turn off injection.
+  bnez rCarbonDioxideTooHigh turnInjectionOff
+
+  # If carbon dioxide is too low, turn on injection.
+  bnez rCarbonDioxideTooLow turnInjectionOn
+
+  # Default, leave injection setting as is.
+  
+# Repeat the main loop.
+endLoop:
+  j mainLoop
+
+# Turn off injection.
+turnInjectionOff:
+  s db Mode 0
+  j mainLoop
+  
+# Turn on injection.
+turnInjectionOn:
+  s db Mode 1
+  j mainLoop
+  
