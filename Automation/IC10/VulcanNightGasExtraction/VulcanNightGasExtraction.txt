@@ -1,0 +1,46 @@
+# VulcanNightGasExtraction
+#   - Extracts night (i.e., cooler) CO2 or Volatiles using a filtration device.
+#   - Overpressure output check.
+
+# User configuration, maximum world temperature.
+define MaxWorldTemperature 400.15  # 127C
+
+# User configuration, maximum output pressure.
+define MaxOutputPressure 30000  # 30MPa
+
+# State registers (used to simplify coding).
+alias rWorldTemperatureTooHigh r10
+alias rOutputPressureTooHigh r11
+
+# Initialization, disable filtration.
+initialize:
+  s db Mode 0
+
+# Main loop
+main:
+  yield
+
+# Compute current state.
+computeStates:
+  l r0 db TemperatureInput
+  sgt rWorldTemperatureTooHigh r0 MaxWorldTemperature
+
+  l r0 db PressureOutput
+  sgt rOutputPressureTooHigh r0 MaxOutputPressure
+
+# Apply rules in priority order.
+applyRules:
+  # If world temperature is too high, turn off filtration.
+  bnez rWorldTemperatureTooHigh turnFiltrationOff
+
+  # If output pressure is too high, turn off filtration.
+  bnez rOutputPressureTooHigh turnFiltrationOff
+
+  # Passed all checks, turn on filtration.
+  s db Mode 1
+  j main
+
+# Turn off filtration.
+turnFiltrationOff:
+  s db Mode 0
+  j main
