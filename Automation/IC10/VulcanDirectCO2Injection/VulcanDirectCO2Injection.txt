@@ -1,0 +1,60 @@
+# VulcanDirectCO2Injection
+#   - Injects night CO2 into an early game hydroponic room.
+#   - Leverages existing hydroponic room cooling.
+#   - Avoids over temperature/pressure condition with safety checks.
+
+# User configuration, target CO2 percentage (5%).
+define TargetCarbonDioxide 0.05
+
+# User configuration, maximum room pressure (overrides carbon dioxide percentage).
+define MaxRoomPressure 100  # 100kPa
+
+# User configuration, maximum room temperature (overrides carbon dioxide percentage).
+define MaxRoomTemperature 303.15  # 30C
+
+# User configuration, maximum world temperature (overrides carbon dioxide percentage).
+define MaxWorldTemperature 400.15  # 127C
+
+# State registers (used to simplify coding).
+alias rCarbonDioxideTooHigh r10
+alias rRoomPressureTooHigh r11
+alias rWorldTemperatureTooHigh r12
+
+# Initialization, disable injection.
+initialize:
+  s db Mode 0
+
+# Main loop
+main:
+  yield
+
+# Compute current state.
+computeStates:
+  l r0 db RatioCarbonDioxideOutput
+  sgt rCarbonDioxideTooHigh r0 TargetCarbonDioxide
+
+  l r0 db PressureOutput
+  sgt rRoomPressureTooHigh r0 MaxRoomPressure
+
+  l r0 db TemperatureInput
+  sgt rWorldTemperatureTooHigh r0 MaxWorldTemperature
+
+# Apply rules in priority order.
+applyRules:
+  # If carbon dioxide is too high, turn off injection.
+  bnez rCarbonDioxideTooHigh turnInjectionOff
+
+  # If room pressure is too high, turn off injection.
+  bnez rRoomPressureTooHigh turnInjectionOff
+
+  # If world temperature is too high, turn off injection.
+  bnez rWorldTemperatureTooHigh turnInjectionOff
+
+  # Passed all checks, turn on injection and repeat.
+  s db Mode 1
+  j main
+
+# Turn off injection.
+turnInjectionOff:
+  s db Mode 0
+  j main
