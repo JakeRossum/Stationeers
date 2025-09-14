@@ -1,0 +1,51 @@
+# VulcanFastNightAirCollection
+#   - Transfers Vulcan's night (cooler) atmospheric gas into storage tank.
+#   - Supports Active Vent, Powered Vent, or Large Powered Vent.
+#   - Over pressure check to avoid pollutants converting to liquids.
+
+# Devices.
+alias dWorldGasSensor d0
+alias dPoweredVent d1
+
+# Constants (careful if changed).
+define MaxWorldTemperature 400.15  # 127C
+define MaxOutputPressure 5000  # 5MPa
+
+# State registers (used to simplify coding).
+alias rWorldTemperatureTooHigh r10
+alias rOutputPressureTooHigh r11
+
+# Initialization.
+initialize:
+  s dPoweredVent On 0
+  s dPoweredVent Mode 1
+
+# Main loop
+main:
+  yield
+
+# Compute current state.
+computeStates:
+  l r0 dWorldGasSensor Temperature
+  sgt rWorldTemperatureTooHigh r0 MaxWorldTemperature
+
+  l r0 dPoweredVent PressureOutput
+  sgt rOutputPressureTooHigh r0 MaxOutputPressure
+
+# Apply rules in priority order.
+applyState:
+  # If world temperature is too high, turn off powered vent.
+  bnez rWorldTemperatureTooHigh turnVentOff
+
+  # If output pressure is too high, turn off powered vent.
+  bnez rOutputPressureTooHigh turnVentOff
+
+# Passed all checks, turn on powered vent.
+turnVentOn:
+  s dPoweredVent On 1
+  j main
+
+# Turn powered vent off.
+turnVentOff:
+  s dPoweredVent On 0
+  j main
