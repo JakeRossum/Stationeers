@@ -1,0 +1,64 @@
+# VulcanCoolingExperiment1
+#   - Experimental design/code for maximizing the amount of liquid pollutants
+#   -   generated using a single large powered fan.
+
+# Devices.
+alias dWorldGasSensor d0
+alias dPoweredVent d1
+alias dGasTank d2
+alias dLiquidTank d3
+
+# Constants.
+define MaxWorldTemperature 413.15  # 140C
+define MaxOutputPressure 55000  # 55MPa
+
+# State registers (used to simplify coding).
+alias rWorldTemperatureTooHigh r10
+alias rOutputPressureTooHigh r11
+alias rGasTankEmpty r12
+
+# Initialization.
+initialize:
+  s dPoweredVent On 0
+  s dPoweredVent Mode 1
+
+# Main loop
+main:
+  yield
+
+# Compute current state.
+computeStates:
+  l r0 dWorldGasSensor Temperature
+  sgt rWorldTemperatureTooHigh r0 MaxWorldTemperature
+
+  l r0 dPoweredVent PressureOutput
+  sgt rOutputPressureTooHigh r0 MaxOutputPressure
+
+  l r0 dGasTank Pressure
+  seqz rGasTankEmpty r0
+
+# Apply rules in priority order.
+applyState:
+  # If world temperature is too high, use the vent to empty the gas lines.
+  bnez rWorldTemperatureTooHigh turnVentReverse
+
+  # If output pressure is too high, reverse the vent to reduce pressure.
+  bnez rOutputPressureTooHigh turnVentReverse
+
+# Passed all checks, turn on powered vent.
+turnVentOn:
+  s dPoweredVent Mode 1
+  s dPoweredVent On 1
+  j main
+
+# Reverse vent to empty the gas lines (typically during heat of day).
+turnVentReverse:
+  bnez rGasTankEmpty turnVentOff
+  s dPoweredVent Mode 0
+  s dPoweredVent On 1
+  j main
+
+# Turn vent off.
+turnVentOff:
+  s dPoweredVent On 0
+  j main
