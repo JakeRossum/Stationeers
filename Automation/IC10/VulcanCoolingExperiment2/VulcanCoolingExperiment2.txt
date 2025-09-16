@@ -1,0 +1,56 @@
+# VulcanCoolingExperiment2
+#   - Experimental design/code for second stage cooling that consumes Experiment1's output and
+#   -   lowers to under 20C.
+#   - Must consume all gas generated in Experiment1 in single day cycle.
+
+# Devices.
+alias dAnalyzer d0
+alias dFeedPump d1
+alias dFeedValve1 d2
+alias dFeedValve2 d3
+alias dExhaustPump d4
+alias dLiquidTank d5
+
+# Constants.
+define ThresholdGasTemperature 383.15  # 110C
+
+# State registers (used to simplify coding).
+alias rGasTemperatureTooHigh r10
+
+# Initialization.
+initialize:
+  s dAnalyzer On 1
+  s dFeedPump On 0
+  s dFeedValve1 On 0
+  s dFeedValve2 On 0
+  s dExhaustPump On 0
+
+# Main loop
+main:
+  yield
+
+# Compute current state.
+computeStates:
+  l r0 dAnalyzer Temperature
+  sgt rGasTemperatureTooHigh r0 ThresholdGasTemperature
+
+# Apply rules in priority order.
+applyState:
+  # If gas temperature is too high then exhaust to the outside (world atmosphere).
+  bnez rGasTemperatureTooHigh turnExhaustOn
+
+# Passed all checks, pull feed gas.
+turnFeedOn:
+  s dFeedPump On 1
+  s dFeedValve1 On 1
+  s dFeedValve2 On 1
+  s dExhaustPump On 0
+  j main
+
+# Exhaust hot gas.
+turnExhaustOn:
+  s dFeedPump On 0
+  s dFeedValve1 On 0
+  s dFeedValve2 On 0
+  s dExhaustPump On 1
+  j main

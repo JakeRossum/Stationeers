@@ -1,0 +1,41 @@
+# VulcanCoolingExperimentDisplay
+#   - Displays "(127-tanktemp)*tankmoles" as suggested (via comment) in Exeriment1 video.
+#   - Added " / 1000" to reduce range.
+
+# Devices.
+alias dDisplay d0
+alias dTank d1
+
+# Constants.
+define Temperature127C 400.15  # 127C
+
+# State registers (used to simplify coding).
+alias rTankTemperature r10
+alias rTankMoles r11
+alias rCoolingFactor r12
+
+# Initialization.
+initialize:
+  s dDisplay On 1
+
+# Main loop
+main:
+  sleep 1
+
+# Acquire state.
+acquireStates:
+  l rTankTemperature dTank Temperature
+  l rTankMoles dTank TotalMoles
+
+# Compute the cooling factor.
+applyState:
+  sub r0 Temperature127C rTankTemperature  # 127C - TankTemp
+  s db Setting r0
+  mul r0 r0 rTankMoles  # (127C - TankTemp) * TankMoles
+  div r0 r0 1000  # ((127C - TankTemp) * TankMoles) / 1000
+  floor rCoolingFactor r0
+
+# Update the display with the cooling factor.
+updateDisplay:
+  s dDisplay Setting rCoolingFactor
+  j main
