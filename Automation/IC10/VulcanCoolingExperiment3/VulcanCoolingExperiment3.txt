@@ -1,0 +1,56 @@
+# VulcanCoolingExperiment3
+#   - Experimental design/code for maximizing the ability to cool CO2 gas as
+#   -   typically used as a coolant for AC units.
+#   - Will continue to cool for a bit after sun rise.
+
+# Devices.
+alias dWorldGasSensor d0
+alias dPoweredVent d1
+alias dGasTank d2
+
+# Constants.
+define MaxWorldTemperature 408.15  # 135C
+
+# State registers (used to simplify coding).
+alias rWorldTemperatureTooHigh r10
+alias rGasTankEmpty r12
+
+# Initialization.
+initialize:
+  s dPoweredVent On 0
+  s dPoweredVent Mode 1
+
+# Main loop
+main:
+  yield
+
+# Compute current state.
+computeStates:
+  l r0 dWorldGasSensor Temperature
+  sgt rWorldTemperatureTooHigh r0 MaxWorldTemperature
+
+  l r0 dGasTank Pressure
+  seqz rGasTankEmpty r0
+
+# Apply rules in priority order.
+applyState:
+  # If world temperature is too high, use the vent to empty the gas lines.
+  bnez rWorldTemperatureTooHigh turnVentReverse
+
+# Passed all checks, turn on powered vent.
+turnVentOn:
+  s dPoweredVent Mode 1
+  s dPoweredVent On 1
+  j main
+
+# Reverse vent to empty the gas lines (typically during heat of day).
+turnVentReverse:
+  bnez rGasTankEmpty turnVentOff
+  s dPoweredVent Mode 0
+  s dPoweredVent On 1
+  j main
+
+# Turn vent off.
+turnVentOff:
+  s dPoweredVent On 0
+  j main
