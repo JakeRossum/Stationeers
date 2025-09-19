@@ -1,0 +1,36 @@
+# FiltrationLimits
+#   - Run filtration if output pressure is below maximum.
+
+# User configuration, maximum output pressure.
+define MaxOutputPressure 30000  # 30MPa
+
+# State registers (used to simplify coding).
+alias rOutputPressureTooHigh r10
+
+# Initialization, disable filtration.
+initialize:
+  s db Mode 0
+
+# Main loop
+mainLoop:
+  sleep 1
+
+# Compute current state and store in registers.
+computeStates:
+  l r0 db PressureOutput
+  sgt rOutputPressureTooHigh r0 MaxOutputPressure
+
+# Apply rules in priority order.
+applyRules:
+  # If output pressure is too high, turn off filtration.
+  bnez rOutputPressureTooHigh turnFiltrationOff
+
+# Otherwise, turn filtration on.
+turnFiltrationOn:
+  s db Mode 1
+  j mainLoop
+
+# Turn filtration off.
+turnFiltrationOff:
+  s db Mode 0
+  j mainLoop
