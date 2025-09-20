@@ -1,0 +1,35 @@
+# VulcanOpenStage1Cooling
+#   - Designed to compress Vulcan night atmosphere to extract liquid pollutants for cooling.
+#   - Assumes the gas collected will be auto-vented.
+
+# Devices.
+alias dGasSensor d0
+alias dPoweredVent d1
+
+# Constant, temperature threshold to enable powered vent if under.
+define MaxWorldGasTemperature 413.15  # 140C
+
+# Initialization.
+initialize:
+  s dPoweredVent On 0
+  s dPoweredVent Mode 1
+
+# Main loop
+main:
+  sleep 1
+
+# Apply rules in priority order.
+appyRules:
+  l r0 dGasSensor Temperature
+  ble r0 MaxWorldGasTemperature turnVentOn
+ 
+# Turn the powered vent off (default if all rules fail).
+turnVentOff:
+  s dPoweredVent On 0
+  j main
+
+# Turn the powered vent on.
+turnVentOn:
+  s dPoweredVent On 1
+  j main
+
