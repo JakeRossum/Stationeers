@@ -1,0 +1,120 @@
+# VulcanAutoFurnaceDegasser
+#  - Controls the flow of ore via a hopper into an advanced furnace to degas ore.
+
+# Constants used to determine when to feed ore into the furnace.  Note, there is
+# a buffer to avoid ore dropping the temperature resulting is partial degassing.
+define MinOreFeedPressure 1000  # 1MPa
+define MinOreFeedTemperature 573  # 300C
+
+# Constants used to manage the furnace temperature/pressure.
+define MinFurnacePressure 10000  # 10MPa
+define MaxFurnacePressure 30000  # 30MPa
+
+# Port devices.
+alias dSensor d0
+alias dFurnace d1
+alias dHopper d2
+alias dVent d3
+
+# State registers.
+alias rOreFeedPressureOkay r7
+alias rOreFeedTemperatureOkay r8
+alias rHasFurnaceInput r9
+alias rHasFurnaceReagents r10
+alias rIsFurnacePressureLow r11
+alias rIsFurnacePressureHigh r12
+alias rIsFurnaceHotterThanWorld r13
+alias rIsWorldTemperatureCold r14
+
+# Initialization.
+initialize:
+  s dFurnace SettingInput 0
+  s dFurnace SettingOutput 0
+  s dFurnace On 0
+  s dFurnace Open 1
+  s dHopper Open 0
+  s dVent On 0
+  s dVent Mode 1
+  s dVent PressureInternal 10000
+
+# Main loop
+main:
+  sleep 1
+  jal fnComputeState
+  jal fnOreFeedToFurnace
+  j manageFurnaceGas
+
+# Compute the current state
+fnComputeState:
+  l r0 dFurnace Pressure
+  slt rIsFurnacePressureLow r0 MinFurnacePressure
+  sgt rIsFurnacePressureHigh r0 MaxFurnacePressure
+  sgt rOreFeedPressureOkay r0 MinOreFeedPressure
+  l r0 dFurnace Temperature
+  sgt rOreFeedTemperatureOkay r0 MinOreFeedTemperature
+  l r0 dFurnace Reagents
+  snez rHasFurnaceReagents r0
+  ls rHasFurnaceInput dFurnace 0 Occupied
+  l r0 dFurnace Temperature
+  l r1 dSensor Temperature
+  sgt rIsFurnaceHotterThanWorld r0 r1
+  slt rIsWorldTemperatureCold r1 MinOreFeedTemperature
+  j ra
+
+# If okay, feed ore to the furnace via the hopper
+fnOreFeedToFurnace:
+  # Only feed if furnace in good state.
+  beqz rOreFeedPressureOkay ra
+  beqz rOreFeedTemperatureOkay ra
+  bnez rHasFurnaceInput ra
+  bnez rHasFurnaceReagents ra
+  # Cycle one item.
+  s dHopper Open 1
+  yield
+  s dHopper Open 0
+  # Wait a little for the ore to travel in the chutes.
+  sleep 2
+  j ra
+
+# Manage the furnace gas based on its state and world atmospheric conditions.
+manageFurnaceGas:
+  bnez rIsFurnacePressureHigh emptyFurnace
+  beqz rIsFurnaceHotterThanWorld heatFurnace
+
+# Turn off adding gas to the furnace.
+turnFurnaceInputOff:
+  s dFurnace SettingInput 0
+  s dFurnace SettingOutput 0
+  s dFurnace On 0
+  s dVent On 0
+  j main
+
+# Empty the furnace of gas due to high pressure.
+emptyFurnace:
+  s dFurnace SettingInput 0
+  s dFurnace SettingOutput 100
+  s dFurnace On 1
+  s dVent On 0
+  sleep 1
+  j main
+
+# Hotter outside than in the furnace, increase its heat.
+heatFurnace:
+  bnez rIsWorldTemperatureCold turnFurnaceInputOff
+  beqz rIsFurnacePressureLow exchangeGasWithWorld
+
+# Pump world gas into the furnace.
+turnFurnaceInputOn:
+  s dFurnace SettingInput 100
+  s dFurnace SettingOutput 0
+  s dFurnace On 1
+  s dVent On 1
+  j main
+
+# Pump gas both in and out at the same time to increase temperature.
+exchangeGasWithWorld:
+  s dFurnace SettingInput 100
+  s dFurnace SettingOutput 100
+  s dFurnace On 1
+  s dVent On 1
+  j main
