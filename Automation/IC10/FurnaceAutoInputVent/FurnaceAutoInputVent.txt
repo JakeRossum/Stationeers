@@ -1,0 +1,44 @@
+# FurnaceAutoInputVent
+#  - Automatically turns on/off an attached active vent base on the 
+#  -   Advance Furnace's power and input dial setting.
+#  - Used to boost input pressure to speed up furnace filling.
+
+# Port devices.
+alias dFurnace d0
+alias dVent d1
+
+# Constants
+define MaxVentPressure 10000  # 10MPa
+
+# Initialization.
+initialize:
+  s dVent On 0
+  s dVent Mode 1
+
+# Main loop
+main:
+  sleep 1
+
+# If the vent output pressure is too high, then shutoff.
+checkVentOutput:
+  l r0 dVent PressureOutput
+  bgt r0 MaxVentPressure turnVentOff
+
+# Check the Advance Furnace's power and input dial setting (only care if 0 or not).
+checkFurnaceInput:
+  l r0 dFurnace On
+  beqz r0 turnVentOff
+
+  l r0 dFurnace SettingInput
+  beqz r0 turnVentOff
+
+# Turn the active vent on.
+turnVentOn:
+  s dVent On 1
+  j main
+
+# Turn the active vent off.
+turnVentOff:
+  s dVent On 0
+  j main
+
