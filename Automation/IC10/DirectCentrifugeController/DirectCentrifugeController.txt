@@ -1,0 +1,84 @@
+# DirectCentrifugeController
+#  - Each device port connected to an optional centrifuge (supports 1 to 6 centrifuges).
+#  - Auto powers down unused centrifuges.
+#  - Auto eject when MaxReagents is reached.  (Increase for larger batches).
+#  - Note: If error on line 49, make sure all device ports are set to centrifuges.
+
+# User Configuration: Maximum amount of reagents before auto eject.
+define MaxReagents 50
+
+# Register used to enumerate 0..5 representing device ports.
+alias rDeviceIndex r8
+
+# Reference Id of current centrifuge.
+alias rDeviceId r9
+
+# Current centrifuge state (used to simplify logic checks).
+alias rIsPowerOn r10
+alias rIsErrorOn r11
+alias rIsEmpty r12
+alias rIsFull r13
+alias rHasInput r14
+
+# Count of device ports supported by an IC Housing.
+define DeviceIndexCount 6
+
+# Initialization.
+initialize:
+  move rDeviceIndex 0
+
+# Loop over each device port and handle the centrifuge(s) found.
+mainLoop:
+  sleep 1
+
+  bdseal dr8 processCentrifuge
+
+  add rDeviceIndex rDeviceIndex 1
+  mod rDeviceIndex rDeviceIndex 6
+
+endLoop:
+  j mainLoop
+
+# Call for each port with a device.
+processCentrifuge:
+  l rDeviceId dr8 ReferenceId
+
+# Compute various centrifuge state to simplify rule checks that follow.
+computeCentrifugeState:
+  l rIsPowerOn rDeviceId On
+  l rIsErrorOn rDeviceId Error
+  l r0 rDeviceId Reagents
+  seqz rIsEmpty r0
+  seq rIsFull r0 MaxReagents  
+  ls rHasInput rDeviceId 0 Occupied
+
+# If the centrifuge is in error state and empty, then close the handle.
+IfErrorOnAndEmptyCheck:
+  and r0 rIsErrorOn rIsEmpty
+  beqz r0 IfErrorOn
+  s rDeviceId Open 0
+  j ra
+
+#If the centrifuge is in error state (and not empty), then wait until it stops.
+IfErrorOn:
+  beqz rIsErrorOn IfFullThenOpen
+  j ra
+
+# If has maximum amount of reagents (i.e., full), then open to empty.
+IfFullThenOpen:
+  beqz rIsFull IfNoInputHasReagents
+  s rDeviceId Open 1
+  j ra  
+
+# If no additional input and have reagents, then open to empty.
+IfNoInputHasReagents:
+  or r0 rHasInput rIsEmpty
+  bnez r0 SwitchPowerBasedOnInput
+  s rDeviceId Open 1
+
+# If input to process, then power on; otherwise power off.
+SwitchPowerBasedOnInput:
+  s rDeviceId On rHasInput
+  
+# Return to the caller.
+  j ra
