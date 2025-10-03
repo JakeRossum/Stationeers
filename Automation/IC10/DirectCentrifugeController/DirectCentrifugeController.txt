@@ -1,4 +1,4 @@
-# DirectCentrifugeController
+# DirectCentrifugeController (https://tinyurl.com/2s43smyf)
 #  - Each device port connected to an optional centrifuge (supports 1 to 6 centrifuges).
 #  - Auto powers down unused centrifuges.
 #  - Auto eject when MaxReagents is reached.  (Increase for larger batches).
