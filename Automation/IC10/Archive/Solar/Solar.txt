@@ -1,0 +1,40 @@
+define hashSolarPanel HASH("StructureSolarPanel")
+define hashSolarPanelHeavy HASH("StructureSolarPanelReinforced")
+
+define Solar000Adjustment -90
+define Solar090Adjustment -180
+define Solar180Adjustment -270
+define Solar270Adjustment -360
+
+alias dDaySensor d0
+
+mainLoop:
+  yield
+
+updateHorizontal:
+  l r0 dDaySensor Horizontal
+
+  add r1 r0 Solar000Adjustment
+  sbn hashSolarPanel HASH("Solar 0") Horizontal r1
+  sbn hashSolarPanelHeavy HASH("Solar 0") Horizontal r1
+
+  add r1 r0 Solar090Adjustment
+  sbn hashSolarPanel HASH("Solar 0") Horizontal r1
+  sbn hashSolarPanelHeavy HASH("Solar 0") Horizontal r1
+
+  add r1 r0 Solar180Adjustment
+  sbn hashSolarPanel HASH("Solar 180") Horizontal r1
+  sbn hashSolarPanelHeavy HASH("Solar 180") Horizontal r1
+
+  add r1 r0 Solar270Adjustment
+  sbn hashSolarPanel HASH("Solar 270") Horizontal r1
+  sbn hashSolarPanelHeavy HASH("Solar 270") Horizontal r1
+
+updateVertical:
+  l r0 dDaySensor Vertical
+  sub r0 90 r0
+  sb hashSolarPanel Vertical r0
+  sb hashSolarPanelHeavy Vertical r0
+
+endLoop:
+  j mainLoop
