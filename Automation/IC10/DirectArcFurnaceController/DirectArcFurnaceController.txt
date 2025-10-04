@@ -1,0 +1,49 @@
+# DirectArcFurnaceController
+#  - Automates feeding input into an idle furnace.
+#  - Each device port (D0..D5) connected to an optional arc furnace (supports 1 to 6 furna
+#  - Auto powers down unused furnaces.
+
+# Register that defines the current device index (0..5), but forced to hardcode with dr8 a
+alias rDeviceIndex r8
+
+# Reference Id of current arc furnace.
+alias rDeviceId r9
+
+# Count of device indexes, uses all D0..D5 ports
+define DeviceIndexCount 6
+
+# Called once, resets the device index to 0.
+initialize:
+  move rDeviceIndex 0
+
+# Main execution loop with yield.
+mainLoop:
+  sleep 1
+
+  # If an actual device is connected, then assume an Arc Furnace and handle it.
+  bdseal dr8 processArcFurnace
+
+  # Increment to the next device and auto wrap back to 0.
+  add rDeviceIndex rDeviceIndex 1
+  mod rDeviceIndex rDeviceIndex DeviceIndexCount
+
+# Repeat the main loop.
+endLoop:
+  j mainLoop
+
+# Handle an Arc Furnace as defined by rDeviceIndex (r8).
+processArcFurnace:
+  # Load the current Arc Furnace reference identifier to avoid using dr8.
+  l rDeviceId dr8 ReferenceId
+
+  # If busy (Idle == 0), then just return to the caller.
+  l r0 rDeviceId Idle
+  beqz r0 ra
+
+  # If input to the furnace is available, then power it up and activate; otherwise power i
+  ls r0 rDeviceId 0 Occupied
+  s rDeviceId On r0
+  s rDeviceId Activate r0
+
+  # Return to the caller.
+  j ra
