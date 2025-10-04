@@ -1,0 +1,13 @@
+define hashOccupancySensor HASH("StructureOccupancySensor")
+define hashLightRound HASH("StructureLightRound")
+define hashRoomName HASH("Hydroponics 1")
+
+mainLoop:
+  sleep 1
+
+updateLights:
+  lbn r0 hashOccupancySensor hashRoomName Activate Minimum
+  sbn hashLightRound hashRoomName On r0
+
+endLoop:
+  j mainLoop
