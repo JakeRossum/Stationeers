@@ -49,7 +49,7 @@ computeCentrifugeState:
   l rIsErrorOn rDeviceId Error
   l r0 rDeviceId Reagents
   seqz rIsEmpty r0
-  seq rIsFull r0 MaxReagents  
+  sge rIsFull r0 MaxReagents  
   ls rHasInput rDeviceId 0 Occupied
 
 # If the centrifuge is in error state and empty, then close the handle.
