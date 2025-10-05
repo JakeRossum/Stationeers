@@ -29,7 +29,7 @@ initialize:
 
 # Loop over each device port and handle the centrifuge(s) found.
 mainLoop:
-  sleep 1
+  yield
 
   bdseal dr8 processCentrifuge
 
