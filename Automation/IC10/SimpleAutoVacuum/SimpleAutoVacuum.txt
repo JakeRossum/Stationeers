@@ -1,0 +1,30 @@
+# SimpleAutoVacuum
+# Simple script to turn on a vent until the sensor indicates a vacuum.
+# Note: Typical usage is for gas collection from an Arc Furnace, Centrifuge, or Composter.
+
+# Devices.
+alias dSensor d0
+alias dVent d1
+
+# State registers.
+alias rNotVacuum r8
+
+# Initialization.
+initialize:
+  s dVent On 0
+  s dVent Mode 1
+
+# Main loop
+main:
+  # Not time critical, save CPU resources.
+  sleep 1
+
+  # Compute state.
+  l r0 dSensor Pressure
+  snez rNotVacuum r0
+
+  # Turn the vent on or off based on the rNotVacuum state.
+  s dVent On rNotVacuum
+
+  # And goto main to repeat.
+  j main
